@@ -1,0 +1,531 @@
+# 导入库
+import numpy as np
+import pandas as pd
+import sklearn as sk
+
+# 导入常见的机器学习模块
+from sklearn.tree import DecisionTreeRegressor
+from sklearn.ensemble import RandomForestRegressor
+from sklearn.ensemble import AdaBoostRegressor
+from sklearn.ensemble import GradientBoostingRegressor
+from sklearn.neighbors import KNeighborsRegressor
+from sklearn.svm import SVR
+from sklearn.neural_network import MLPRegressor
+
+# 导入机器学习评价指标
+from sklearn.metrics import mean_squared_error
+from sklearn.metrics import mean_absolute_error
+from sklearn.metrics import explained_variance_score
+from sklearn.metrics import r2_score
+
+
+# =============================================================================
+# 导入数据
+data_land = pd.read_csv(
+    'powerplant-FIT/solar_watervsland/solarland.csv', encoding='gbk')
+data_water = pd.read_csv(
+    'powerplant-FIT/solar_watervsland/solarwater.csv', encoding='gbk')
+# 数据统计信息
+print(data_land.info())
+print(data_water.info())
+
+# =============================================================================
+# 创建训练集和测试集，测试集为30%，训练集为70%，打乱数据
+data_land_train = data_land.sample(frac=0.7, random_state=7)
+data_land_test = data_land.drop(data_land_train.index)
+data_water_train = data_water.sample(frac=0.7, random_state=7)
+data_water_test = data_water.drop(data_water_train.index)
+
+# 以第3457列为自变量，第2列为因变量
+X_land_train = data_land_train.iloc[:, [3, 4, 5, 7]].values
+X_land_test = data_land_test.iloc[:, [3, 4, 5, 7]].values
+y_land_train = data_land_train.iloc[:, [2]].values
+y_land_test = data_land_test.iloc[:, [2]].values
+X_water_train = data_water_train.iloc[:, [3, 4, 5, 7]].values
+X_water_test = data_water_test.iloc[:, [3, 4, 5, 7]].values
+y_water_train = data_water_train.iloc[:, [2]].values
+y_water_test = data_water_test.iloc[:, [2]].values
+
+# 建立绘图用的预测数据集
+X_land_plot = data_land.iloc[:, [3, 4, 5, 7]].values
+y_land_plot = data_land.iloc[:, [2]].values
+X_water_plot = data_water.iloc[:, [3, 4, 5, 7]].values
+y_water_plot = data_water.iloc[:, [2]].values
+
+# 建立绘图用的X并转化为DataFrame
+X_land_plot_X = data_land.iloc[:, [0, 1, 2]].values
+X_water_plot_X = data_water.iloc[:, [0, 1, 2]].values
+X_land_plot_X = pd.DataFrame(X_land_plot_X)
+X_water_plot_X = pd.DataFrame(X_water_plot_X)
+
+
+# =============================================================================
+# 创建决策树回归模型
+regressor_land_DecisionTree = DecisionTreeRegressor(random_state=7)
+regressor_water_DecisionTree = DecisionTreeRegressor(random_state=7)
+# 训练模型
+regressor_land_DecisionTree.fit(X_land_train, y_land_train.ravel())
+regressor_water_DecisionTree.fit(X_water_train, y_water_train.ravel())
+# 预测
+y_land_pred_DecisionTree = regressor_land_DecisionTree.predict(X_land_test)
+y_water_pred_DecisionTree = regressor_water_DecisionTree.predict(X_water_test)
+# 评价决策树回归模型
+print('=========================================================')
+print('陆上光伏决策树回归模型评价结果：')
+print('MSE:', mean_squared_error(y_land_test, y_land_pred_DecisionTree))
+print('MAE:', mean_absolute_error(y_land_test, y_land_pred_DecisionTree))
+print('R2:', r2_score(y_land_test, y_land_pred_DecisionTree))
+print('可解释方差：', explained_variance_score(
+    y_land_test, y_land_pred_DecisionTree))
+print('=========================================================')
+print('水上光伏决策树回归模型评价结果：')
+print('MSE:', mean_squared_error(y_water_test, y_water_pred_DecisionTree))
+print('MAE:', mean_absolute_error(y_water_test, y_water_pred_DecisionTree))
+print('R2:', r2_score(y_water_test, y_water_pred_DecisionTree))
+print('可解释方差：', explained_variance_score(
+    y_water_test, y_water_pred_DecisionTree))
+print('=========================================================')
+# 显示显示特征权重
+print('决策树回归模型的权重：')
+print(regressor_land_DecisionTree.feature_importances_)
+print(regressor_water_DecisionTree.feature_importances_)
+# 显示决策树回归模型的结构
+print('决策树回归模型的结构：')
+print(regressor_land_DecisionTree.tree_)
+print(regressor_water_DecisionTree.tree_)
+# 显示决策树回归模型的参数
+print('决策树回归模型的参数：')
+print(regressor_land_DecisionTree.get_params())
+print(regressor_water_DecisionTree.get_params())
+# =============================================================================
+# 将MSE，MAE，R2，可解释方差合并为一个表，并保存
+regressor_DecisionTree_result = pd.DataFrame({
+    '评价指标': ['MSE', 'MAE', 'R2', '可解释方差'],
+    '陆上光伏': [mean_squared_error(y_land_test, y_land_pred_DecisionTree),
+             mean_absolute_error(y_land_test, y_land_pred_DecisionTree),
+             r2_score(y_land_test, y_land_pred_DecisionTree),
+             explained_variance_score(y_land_test, y_land_pred_DecisionTree)],
+    '水上光伏': [mean_squared_error(y_water_test, y_water_pred_DecisionTree),
+             mean_absolute_error(y_water_test, y_water_pred_DecisionTree),
+             r2_score(y_water_test, y_water_pred_DecisionTree),
+             explained_variance_score(y_water_test, y_water_pred_DecisionTree)]})
+regressor_DecisionTree_result.to_csv(
+    'powerplant-FIT/solar_watervsland/regressor_DecisionTree_result_opt.csv', index=False)
+# 以绘图用的数据集预测数据，并转化为DataFrame
+y_land_plot_DecisionTree = regressor_land_DecisionTree.predict(X_land_plot)
+y_water_plot_DecisionTree = regressor_water_DecisionTree.predict(X_water_plot)
+y_land_plot_DecisionTree = pd.DataFrame(y_land_plot_DecisionTree)
+y_water_plot_DecisionTree = pd.DataFrame(y_water_plot_DecisionTree)
+# 合并预测数据，设置列名
+y_land_pred_DecisionTree_plot = pd.concat(
+    [X_land_plot_X, y_land_plot_DecisionTree], axis=1)
+y_water_pred_DecisionTree_plot = pd.concat(
+    [X_water_plot_X, y_water_plot_DecisionTree], axis=1)
+y_land_pred_DecisionTree_plot.columns = [
+    'TIME', 'min', 'True power', 'DecisionTree predict power']
+y_water_pred_DecisionTree_plot.columns = [
+    'TIME', 'min', 'True power', 'DecisionTree predict power']
+# 保存预测数据为csv文件
+y_land_pred_DecisionTree_plot.to_csv(
+    'powerplant-FIT/solar_watervsland/y_land_pred_DecisionTree_opt.csv')
+y_water_pred_DecisionTree_plot.to_csv(
+    'powerplant-FIT/solar_watervsland/y_water_pred_DecisionTree_opt.csv')
+
+
+# =============================================================================
+# 创建RandomForestRegressor回归模型
+regressor_land_RandomForest = RandomForestRegressor(random_state=7)
+regressor_water_RandomForest = RandomForestRegressor(random_state=7)
+# 训练模型
+regressor_land_RandomForest.fit(X_land_train, y_land_train.ravel())
+regressor_water_RandomForest.fit(X_water_train, y_water_train.ravel())
+# 预测
+y_land_pred_RandomForest = regressor_land_RandomForest.predict(X_land_test)
+y_water_pred_RandomForest = regressor_water_RandomForest.predict(X_water_test)
+# 评价RandomForest回归模型
+print('=========================================================')
+print('陆上光伏RandomForest回归模型评价结果：')
+print('MSE:', mean_squared_error(y_land_test, y_land_pred_RandomForest))
+print('MAE:', mean_absolute_error(y_land_test, y_land_pred_RandomForest))
+print('R2:', r2_score(y_land_test, y_land_pred_RandomForest))
+print('可解释方差：', explained_variance_score(
+    y_land_test, y_land_pred_RandomForest))
+print('=========================================================')
+print('水上光伏RandomForest回归模型评价结果：')
+print('MSE:', mean_squared_error(y_water_test, y_water_pred_RandomForest))
+print('MAE:', mean_absolute_error(y_water_test, y_water_pred_RandomForest))
+print('R2:', r2_score(y_water_test, y_water_pred_RandomForest))
+print('可解释方差：', explained_variance_score(
+    y_water_test, y_water_pred_RandomForest))
+print('=========================================================')
+# 显示特征权重
+print('RandomForest回归模型的权重：')
+print(regressor_land_RandomForest.feature_importances_)
+print(regressor_water_RandomForest.feature_importances_)
+# 显示RandomForest模型的参数
+print('RandomForest回归模型的参数：')
+print(regressor_land_RandomForest.get_params())
+print(regressor_water_RandomForest.get_params())
+print('=========================================================')
+# 将MSE，MAE，R2，可解释方差合并为一个表，并保存
+regressor_RandomForest_result = pd.DataFrame({
+    '评价指标': ['MSE', 'MAE', 'R2', '可解释方差'],
+    '陆上光伏': [mean_squared_error(y_land_test, y_land_pred_RandomForest),
+             mean_absolute_error(y_land_test, y_land_pred_RandomForest),
+             r2_score(y_land_test, y_land_pred_RandomForest),
+             explained_variance_score(y_land_test, y_land_pred_RandomForest)],
+    '水上光伏': [mean_squared_error(y_water_test, y_water_pred_RandomForest),
+             mean_absolute_error(y_water_test, y_water_pred_RandomForest),
+             r2_score(y_water_test, y_water_pred_RandomForest),
+             explained_variance_score(y_water_test, y_water_pred_RandomForest)]})
+regressor_RandomForest_result.to_csv(
+    'powerplant-FIT/solar_watervsland/regressor_RandomForest_result_opt.csv')
+# 以绘图用的数据集预测数据，并转化为DataFrame
+y_land_plot_RandomForest = regressor_land_RandomForest.predict(X_land_plot)
+y_water_plot_RandomForest = regressor_water_RandomForest.predict(X_water_plot)
+y_land_plot_RandomForest = pd.DataFrame(y_land_plot_RandomForest)
+y_water_plot_RandomForest = pd.DataFrame(y_water_plot_RandomForest)
+# 合并预测数据，设置列名
+y_land_pred_RandomForest_plot = pd.concat(
+    [X_land_plot_X, y_land_plot_RandomForest], axis=1)
+y_water_pred_RandomForest_plot = pd.concat(
+    [X_water_plot_X, y_water_plot_RandomForest], axis=1)
+y_land_pred_RandomForest_plot.columns = [
+    'TIME', 'min', 'True power', 'RandomForest predict power']
+y_water_pred_RandomForest_plot.columns = [
+    'TIME', 'min', 'True power', 'RandomForest predict power']
+# 保存预测数据为csv文件
+y_land_pred_RandomForest_plot.to_csv(
+    'powerplant-FIT/solar_watervsland/y_land_pred_RandomForest_opt.csv')
+y_water_pred_RandomForest_plot.to_csv(
+    'powerplant-FIT/solar_watervsland/y_water_pred_RandomForest_opt.csv')
+
+
+# =============================================================================
+# 创建AdaBoost回归模型
+regressor_land_AdaBoost = AdaBoostRegressor(random_state=7)
+regressor_water_AdaBoost = AdaBoostRegressor(random_state=7)
+# 训练模型
+regressor_land_AdaBoost.fit(X_land_train, y_land_train.ravel())
+regressor_water_AdaBoost.fit(X_water_train, y_water_train.ravel())
+# 预测
+y_land_pred_AdaBoost = regressor_land_AdaBoost.predict(X_land_test)
+y_water_pred_AdaBoost = regressor_water_AdaBoost.predict(X_water_test)
+# 评价AdaBoost回归模型
+print('=========================================================')
+print('陆上光伏AdaBoost回归模型评价结果：')
+print('MSE:', mean_squared_error(y_land_test, y_land_pred_AdaBoost))
+print('MAE:', mean_absolute_error(y_land_test, y_land_pred_AdaBoost))
+print('R2:', r2_score(y_land_test, y_land_pred_AdaBoost))
+print('可解释方差：', explained_variance_score(y_land_test, y_land_pred_AdaBoost))
+print('=========================================================')
+print('水上光伏AdaBoost回归模型评价结果：')
+print('MSE:', mean_squared_error(y_water_test, y_water_pred_AdaBoost))
+print('MAE:', mean_absolute_error(y_water_test, y_water_pred_AdaBoost))
+print('R2:', r2_score(y_water_test, y_water_pred_AdaBoost))
+print('可解释方差：', explained_variance_score(y_water_test, y_water_pred_AdaBoost))
+print('=========================================================')
+# 显示显示特征权重
+print('AdaBoost回归模型的特征权重：')
+print(regressor_land_AdaBoost.feature_importances_)
+print(regressor_water_AdaBoost.feature_importances_)
+# 显示AdaBoost模型的参数
+print('AdaBoost回归模型的参数：')
+print(regressor_land_AdaBoost.get_params())
+print(regressor_water_AdaBoost.get_params())
+print('=========================================================')
+# 将MSE，MAE，R2，可解释方差合并为一个表，并保存
+regressor_AdaBoost_result = pd.DataFrame({
+    '评价指标': ['MSE', 'MAE', 'R2', '可解释方差'],
+    '陆上光伏': [mean_squared_error(y_land_test, y_land_pred_AdaBoost),
+             mean_absolute_error(y_land_test, y_land_pred_AdaBoost),
+             r2_score(y_land_test, y_land_pred_AdaBoost),
+             explained_variance_score(y_land_test, y_land_pred_AdaBoost)],
+    '水上光伏': [mean_squared_error(y_land_test, y_land_pred_AdaBoost),
+             mean_absolute_error(y_land_test, y_land_pred_AdaBoost),
+             r2_score(y_land_test, y_land_pred_AdaBoost),
+             explained_variance_score(y_land_test, y_land_pred_AdaBoost)]})
+regressor_AdaBoost_result.to_csv(
+    'powerplant-FIT/solar_watervsland/regressor_AdaBoost_result_opt.csv')
+# 以绘图用的数据集预测数据，并转化为DataFrame
+y_land_plot_AdaBoost = regressor_land_AdaBoost.predict(X_land_plot)
+y_water_plot_AdaBoost = regressor_water_AdaBoost.predict(X_water_plot)
+y_land_plot_AdaBoost = pd.DataFrame(y_land_plot_AdaBoost)
+y_water_plot_AdaBoost = pd.DataFrame(y_water_plot_AdaBoost)
+# 合并预测数据，设置列名
+y_land_pred_AdaBoost_plot = pd.concat(
+    [X_land_plot_X, y_land_plot_AdaBoost], axis=1)
+y_water_pred_AdaBoost_plot = pd.concat(
+    [X_water_plot_X, y_water_plot_AdaBoost], axis=1)
+y_land_pred_AdaBoost_plot.columns = [
+    'TIME', 'min', 'True power', 'AdaBoost predict power']
+y_water_pred_AdaBoost_plot.columns = [
+    'TIME', 'min', 'True power', 'AdaBoost predict power']
+# 保存预测数据为csv文件
+y_land_pred_AdaBoost_plot.to_csv(
+    'powerplant-FIT/solar_watervsland/y_land_pred_AdaBoost_opt.csv')
+y_water_pred_AdaBoost_plot.to_csv(
+    'powerplant-FIT/solar_watervsland/y_water_pred_AdaBoost_opt.csv')
+
+
+# =============================================================================
+# 创建GradientBoosting回归模型
+regressor_land_GradientBoosting = GradientBoostingRegressor(random_state=7)
+regressor_water_GradientBoosting = GradientBoostingRegressor(random_state=7)
+# 训练模型
+regressor_land_GradientBoosting.fit(X_land_train, y_land_train.ravel())
+regressor_water_GradientBoosting.fit(X_water_train, y_water_train.ravel())
+# 预测
+y_land_pred_GradientBoosting = regressor_land_GradientBoosting.predict(
+    X_land_test)
+y_water_pred_GradientBoosting = regressor_water_GradientBoosting.predict(
+    X_water_test)
+# 评价GradientBoosting回归模型
+print('=========================================================')
+print('陆上光伏GradientBoosting回归模型评价结果：')
+print('MSE:', mean_squared_error(y_land_test, y_land_pred_GradientBoosting))
+print('MAE:', mean_absolute_error(y_land_test, y_land_pred_GradientBoosting))
+print('R2:', r2_score(y_land_test, y_land_pred_GradientBoosting))
+print('可解释方差：', explained_variance_score(
+    y_land_test, y_land_pred_GradientBoosting))
+print('=========================================================')
+print('水上光伏GradientBoosting回归模型评价结果：')
+print('MSE:', mean_squared_error(y_water_test, y_water_pred_GradientBoosting))
+print('MAE:', mean_absolute_error(y_water_test, y_water_pred_GradientBoosting))
+print('R2:', r2_score(y_water_test, y_water_pred_GradientBoosting))
+print('可解释方差：', explained_variance_score(
+    y_water_test, y_water_pred_GradientBoosting))
+print('=========================================================')
+# 显示显示特征权重
+print('GradientBoosting回归模型的特征权重：')
+print(regressor_land_GradientBoosting.feature_importances_)
+print(regressor_water_GradientBoosting.feature_importances_)
+# 显示GradientBoosting模型的参数
+print('GradientBoosting回归模型的参数：')
+print(regressor_land_GradientBoosting.get_params())
+print(regressor_water_GradientBoosting.get_params())
+print('=========================================================')
+# 将MSE，MAE，R2，可解释方差合并为一个表，并保存
+regressor_GradientBoosting_result = pd.DataFrame({
+    '评价指标': ['MSE', 'MAE', 'R2', '可解释方差'],
+    '陆上光伏': [mean_squared_error(y_land_test, y_land_pred_GradientBoosting),
+             mean_absolute_error(y_land_test, y_land_pred_GradientBoosting),
+             r2_score(y_land_test, y_land_pred_GradientBoosting),
+             explained_variance_score(
+                 y_land_test, y_land_pred_GradientBoosting)],
+    '水上光伏': [mean_squared_error(y_water_test, y_water_pred_GradientBoosting),
+             mean_absolute_error(y_water_test, y_water_pred_GradientBoosting),
+             r2_score(y_water_test, y_water_pred_GradientBoosting),
+             explained_variance_score(
+                 y_water_test, y_water_pred_GradientBoosting)]})
+regressor_GradientBoosting_result.to_csv(
+    'powerplant-FIT/solar_watervsland/regressor_GradientBoosting_result_opt.csv')
+# 以绘图用的数据集预测数据，并转化为DataFrame
+y_land_plot_GradientBoosting = regressor_land_GradientBoosting.predict(
+    X_land_plot)
+y_water_plot_GradientBoosting = regressor_water_GradientBoosting.predict(
+    X_water_plot)
+y_land_plot_GradientBoosting = pd.DataFrame(y_land_plot_GradientBoosting)
+y_water_plot_GradientBoosting = pd.DataFrame(y_water_plot_GradientBoosting)
+# 合并预测数据，设置列名
+y_land_pred_GradientBoosting_plot = pd.concat(
+    [X_land_plot_X, y_land_plot_GradientBoosting], axis=1)
+y_water_pred_GradientBoosting_plot = pd.concat(
+    [X_water_plot_X, y_water_plot_GradientBoosting], axis=1)
+y_land_pred_GradientBoosting_plot.columns = [
+    'TIME', 'min', 'True power', 'GradientBoosting predict power']
+y_water_pred_GradientBoosting_plot.columns = [
+    'TIME', 'min', 'True power', 'GradientBoosting predict power']
+# 保存预测数据为csv文件
+y_land_pred_GradientBoosting_plot.to_csv(
+    'powerplant-FIT/solar_watervsland/y_land_pred_GradientBoosting_opt.csv')
+y_water_pred_GradientBoosting_plot.to_csv(
+    'powerplant-FIT/solar_watervsland/y_water_pred_GradientBoosting_opt.csv')
+
+
+# =============================================================================
+# 创建KNeighbors回归模型
+regressor_land_KNeighbors = KNeighborsRegressor(n_neighbors=5)
+regressor_water_KNeighbors = KNeighborsRegressor(n_neighbors=5)
+# 训练模型
+regressor_land_KNeighbors.fit(X_land_train, y_land_train.ravel())
+regressor_water_KNeighbors.fit(X_water_train, y_water_train.ravel())
+# 预测
+y_land_pred_KNeighbors = regressor_land_KNeighbors.predict(X_land_test)
+y_water_pred_KNeighbors = regressor_water_KNeighbors.predict(X_water_test)
+# 评价KNeighbors回归模型
+print('=========================================================')
+print('陆上光伏KNeighbors回归模型评价结果：')
+print('MSE:', mean_squared_error(y_land_test, y_land_pred_KNeighbors))
+print('MAE:', mean_absolute_error(y_land_test, y_land_pred_KNeighbors))
+print('R2:', r2_score(y_land_test, y_land_pred_KNeighbors))
+print('可解释方差：', explained_variance_score(y_land_test, y_land_pred_KNeighbors))
+print('=========================================================')
+print('水上光伏KNeighbors回归模型评价结果：')
+print('MSE:', mean_squared_error(y_water_test, y_water_pred_KNeighbors))
+print('MAE:', mean_absolute_error(y_water_test, y_water_pred_KNeighbors))
+print('R2:', r2_score(y_water_test, y_water_pred_KNeighbors))
+print('可解释方差：', explained_variance_score(
+    y_water_test, y_water_pred_KNeighbors))
+print('=========================================================')
+# 将MSE，MAE，R2，可解释方差合并为一个表，并保存
+regressor_KNeighbors_result = pd.DataFrame({
+    '评价指标': ['MSE', 'MAE', 'R2', '可解释方差'],
+    '陆上光伏': [mean_squared_error(y_land_test, y_land_pred_KNeighbors),
+             mean_absolute_error(y_land_test, y_land_pred_KNeighbors),
+             r2_score(y_land_test, y_land_pred_KNeighbors),
+             explained_variance_score(y_land_test, y_land_pred_KNeighbors)],
+    '水上光伏': [mean_squared_error(y_water_test, y_water_pred_KNeighbors),
+             mean_absolute_error(y_water_test, y_water_pred_KNeighbors),
+             r2_score(y_water_test, y_water_pred_KNeighbors),
+             explained_variance_score(y_water_test, y_water_pred_KNeighbors)]})
+regressor_KNeighbors_result.to_csv(
+    'powerplant-FIT/solar_watervsland/regressor_KNeighbors_result_opt.csv')
+# 以绘图用的数据集预测数据，并转化为DataFrame
+y_land_plot_KNeighbors = regressor_land_KNeighbors.predict(X_land_plot)
+y_water_plot_KNeighbors = regressor_water_KNeighbors.predict(X_water_plot)
+y_land_plot_KNeighbors = pd.DataFrame(y_land_plot_KNeighbors)
+y_water_plot_KNeighbors = pd.DataFrame(y_water_plot_KNeighbors)
+# 合并预测数据，设置列名
+y_land_pred_KNeighbors_plot = pd.concat(
+    [X_land_plot_X, y_land_plot_KNeighbors], axis=1)
+y_water_pred_KNeighbors_plot = pd.concat(
+    [X_water_plot_X, y_water_plot_KNeighbors], axis=1)
+y_land_pred_KNeighbors_plot.columns = [
+    'TIME', 'min', 'True power', 'KNeighbors predict power']
+y_water_pred_KNeighbors_plot.columns = [
+    'TIME', 'min', 'True power', 'KNeighbors predict power']
+# 保存预测数据为csv文件
+y_land_pred_KNeighbors_plot.to_csv(
+    'powerplant-FIT/solar_watervsland/y_land_pred_KNeighbors_opt.csv')
+y_water_pred_KNeighbors_plot.to_csv(
+    'powerplant-FIT/solar_watervsland/y_water_pred_KNeighbors_opt.csv')
+
+
+# =============================================================================
+# 创建神经网络回归模型
+regressor_land_MLP = MLPRegressor(activation="tanh", solver="adam",
+                                  hidden_layer_sizes=(100, 50, 25), max_iter=5000, alpha=0.001)
+regressor_water_MLP = MLPRegressor(activation="tanh", solver="adam",
+                                   hidden_layer_sizes=(100, 50, 25), max_iter=5000, alpha=0.001)
+# 训练模型
+regressor_land_MLP.fit(X_land_train, y_land_train.ravel())
+regressor_water_MLP.fit(X_water_train, y_water_train.ravel())
+# 预测
+y_land_pred_MLP = regressor_land_MLP.predict(X_land_test)
+y_water_pred_MLP = regressor_water_MLP.predict(X_water_test)
+# 评价神经网络回归模型
+print('=========================================================')
+print('陆上光伏神经网络回归模型评价结果：')
+print('MSE:', mean_squared_error(y_land_test, y_land_pred_MLP))
+print('MAE:', mean_absolute_error(y_land_test, y_land_pred_MLP))
+print('R2:', r2_score(y_land_test, y_land_pred_MLP))
+print('可解释方差：', explained_variance_score(y_land_test, y_land_pred_MLP))
+print('=========================================================')
+print('水上光伏神经网络回归模型评价结果：')
+print('MSE:', mean_squared_error(y_water_test, y_water_pred_MLP))
+print('MAE:', mean_absolute_error(y_water_test, y_water_pred_MLP))
+print('R2:', r2_score(y_water_test, y_water_pred_MLP))
+print('可解释方差：', explained_variance_score(y_water_test, y_water_pred_MLP))
+print('=========================================================')
+# 将MSE，MAE，R2，可解释方差合并为一个表，并保存
+regressor_MLP_result = pd.DataFrame({
+    '评价指标': ['MSE', 'MAE', 'R2', '可解释方差'],
+    '陆上光伏': [mean_squared_error(y_land_test, y_land_pred_MLP),
+             mean_absolute_error(y_land_test, y_land_pred_MLP),
+             r2_score(y_land_test, y_land_pred_MLP),
+             explained_variance_score(y_land_test, y_land_pred_MLP)],
+    '水上光伏': [mean_squared_error(y_water_test, y_water_pred_MLP),
+             mean_absolute_error(y_water_test, y_water_pred_MLP),
+             r2_score(y_water_test, y_water_pred_MLP),
+             explained_variance_score(y_water_test, y_water_pred_MLP)]})
+regressor_MLP_result.to_csv(
+    'powerplant-FIT/solar_watervsland/regressor_MLP_result_opt.csv')
+# 以绘图用的数据集预测数据，并转化为DataFrame
+y_land_plot_MLP = regressor_land_MLP.predict(X_land_plot)
+y_water_plot_MLP = regressor_water_MLP.predict(X_water_plot)
+y_land_plot_MLP = pd.DataFrame(y_land_plot_MLP)
+y_water_plot_MLP = pd.DataFrame(y_water_plot_MLP)
+# 合并预测数据，设置列名
+y_land_pred_MLP_plot = pd.concat(
+    [X_land_plot_X, y_land_plot_MLP], axis=1)
+y_water_pred_MLP_plot = pd.concat(
+    [X_water_plot_X, y_water_plot_MLP], axis=1)
+y_land_pred_MLP_plot.columns = [
+    'TIME', 'min', 'True power', 'MLP predict power']
+y_water_pred_MLP_plot.columns = [
+    'TIME', 'min', 'True power', 'MLP predict power']
+# 保存预测数据为csv文件
+y_land_pred_MLP_plot.to_csv(
+    'powerplant-FIT/solar_watervsland/y_land_pred_MLP_opt.csv')
+y_water_pred_MLP_plot.to_csv(
+    'powerplant-FIT/solar_watervsland/y_water_pred_MLP_opt.csv')
+
+
+# =============================================================================
+# 创建SVR回归模型
+regressor_land_SVR = SVR(kernel='rbf', C=1e3, gamma=0.1)
+regressor_water_SVR = SVR(kernel='rbf', C=1e3, gamma=0.1)
+# 训练模型
+regressor_land_SVR.fit(X_land_train, y_land_train.ravel())
+regressor_water_SVR.fit(X_water_train, y_water_train.ravel())
+# 预测
+y_land_pred_SVR = regressor_land_SVR.predict(X_land_test)
+y_water_pred_SVR = regressor_water_SVR.predict(X_water_test)
+# 评价SVR回归模型
+print('=========================================================')
+print('陆上光伏SVR回归模型评价结果：')
+print('MSE:', mean_squared_error(y_land_test, y_land_pred_SVR))
+print('MAE:', mean_absolute_error(y_land_test, y_land_pred_SVR))
+print('R2:', r2_score(y_land_test, y_land_pred_SVR))
+print('可解释方差：', explained_variance_score(y_land_test, y_land_pred_SVR))
+print('=========================================================')
+print('水上光伏SVR回归模型评价结果：')
+print('MSE:', mean_squared_error(y_water_test, y_water_pred_SVR))
+print('MAE:', mean_absolute_error(y_water_test, y_water_pred_SVR))
+print('R2:', r2_score(y_water_test, y_water_pred_SVR))
+print('可解释方差：', explained_variance_score(y_water_test, y_water_pred_SVR))
+print('=========================================================')
+# 将MSE，MAE，R2，可解释方差合并为一个表，并保存
+regressor_SVR_result = pd.DataFrame({
+    '评价指标': ['MSE', 'MAE', 'R2', '可解释方差'],
+    '陆上光伏': [mean_squared_error(y_land_test, y_land_pred_SVR),
+             mean_absolute_error(y_land_test, y_land_pred_SVR),
+             r2_score(y_land_test, y_land_pred_SVR),
+             explained_variance_score(y_land_test, y_land_pred_SVR)],
+    '水上光伏': [mean_squared_error(y_water_test, y_water_pred_SVR),
+             mean_absolute_error(y_water_test, y_water_pred_SVR),
+             r2_score(y_water_test, y_water_pred_SVR),
+             explained_variance_score(y_water_test, y_water_pred_SVR)]})
+regressor_SVR_result.to_csv(
+    'powerplant-FIT/solar_watervsland/regressor_SVR_result_opt.csv')
+# 以绘图用的数据集预测数据，并转化为DataFrame
+y_land_plot_SVR = regressor_land_SVR.predict(X_land_plot)
+y_water_plot_SVR = regressor_water_SVR.predict(X_water_plot)
+y_land_plot_SVR = pd.DataFrame(y_land_plot_SVR)
+y_water_plot_SVR = pd.DataFrame(y_water_plot_SVR)
+# 合并预测数据，设置列名
+y_land_pred_SVR_plot = pd.concat(
+    [X_land_plot_X, y_land_plot_SVR], axis=1)
+y_water_pred_SVR_plot = pd.concat(
+    [X_water_plot_X, y_water_plot_SVR], axis=1)
+y_land_pred_SVR_plot.columns = [
+    'TIME', 'min', 'True power', 'SVR predict power']
+y_water_pred_SVR_plot.columns = [
+    'TIME', 'min', 'True power', 'SVR predict power']
+# 保存预测数据为csv文件
+y_land_pred_SVR_plot.to_csv(
+    'powerplant-FIT/solar_watervsland/y_land_pred_SVR_opt.csv')
+y_water_pred_SVR_plot.to_csv(
+    'powerplant-FIT/solar_watervsland/y_water_pred_SVR_opt.csv')
+
+# 清除缓存
+del X_land_train, X_land_test, X_water_train, X_water_test, y_land_train, y_land_test, y_water_train, y_water_test
+del X_land_plot, X_water_plot, X_land_plot_X, X_water_plot_X
+del y_land_plot, y_water_plot
+del y_land_pred_SVR, y_water_pred_SVR
+del y_land_pred_MLP, y_water_pred_MLP
+del y_land_pred_SVR_plot, y_water_pred_SVR_plot
+del y_land_pred_MLP_plot, y_water_pred_MLP_plot
+del regressor_land_SVR, regressor_water_SVR
+del regressor_land_MLP, regressor_water_MLP
